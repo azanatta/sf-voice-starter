@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCV org setup</title>
+<!--
+  The form is NOT written out here. It is generated at runtime from /api/state, which serves
+  config/settings-schema.ts. That is deliberate: a hand-written form is a second place to define
+  settings, and it drifts. Adding a setting to the schema makes it appear here with no edit to this
+  file.
+-->
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f6f7f9; --border: #d8dce3; --text: #16191d; --muted: #5c6570;
+    --accent: #0b5fff; --ok: #1a7f37; --warn: #9a6700; --err: #b42318; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171a; --panel: #1c2024; --border: #2e343b; --text: #e7eaee; --muted: #9aa4b0;
+      --accent: #6ea8ff; --ok: #4ac26b; --warn: #d4a72c; --err: #ff7b72;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  header {
+    padding: 20px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  h1 { font-size: 18px; margin: 0; }
+  header .path { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; align-items: start; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .pane { padding: 20px 28px; }
+  .pane.right { border-left: 1px solid var(--border); position: sticky; top: 0; max-height: 100vh; overflow: auto; }
+  @media (max-width: 1000px) { .pane.right { border-left: none; border-top: 1px solid var(--border); position: static; max-height: none; } }
+  fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 0 0 18px; background: var(--panel); }
+  legend { padding: 0 6px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+  .env { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+  .desc { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text); font: inherit; font-size: 14px;
+  }
+  input[type=checkbox] { width: 16px; height: 16px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .msg { font-size: 12px; margin-top: 4px; }
+  .msg.err { color: var(--err); } .msg.warn { color: var(--warn); }
+  .invalid input, .invalid select { border-color: var(--err); }
+  button {
+    font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  #log {
+    font-family: var(--mono); font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+    min-height: 300px; max-height: 62vh; overflow: auto;
+  }
+  .l-phase { color: var(--accent); font-weight: 700; margin-top: 6px; }
+  .l-ok { color: var(--ok); } .l-warn { color: var(--warn); } .l-err { color: var(--err); }
+  .l-cmd, .l-skip { color: var(--muted); }
+  .banner { padding: 9px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; display: none; }
+  .banner.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); display: block; }
+  .banner.err { background: color-mix(in srgb, var(--err) 14%, transparent); color: var(--err); display: block; }
+  .profiles { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  .profiles select, .profiles input { width: auto; min-width: 130px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Service Cloud Voice — org setup</h1>
+  <span class="path" id="envpath"></span>
+  <div class="profiles">
+    <select id="profileSelect"><option value="">Profile…</option></select>
+    <button id="loadProfile">Load</button>
+    <input type="text" id="profileName" placeholder="New profile name">
+    <button id="saveProfile">Save</button>
+    <button id="deleteProfile">Delete</button>
+  </div>
+</header>
+
+<main>
+  <section class="pane left">
+    <div class="banner" id="formBanner"></div>
+    <form id="form"></form>
+  </section>
+
+  <section class="pane right">
+    <div class="actions">
+      <button class="primary" id="run">Run setup</button>
+      <button id="runVerify">Verify only</button>
+      <button id="save">Save .env</button>
+      <button id="stop" disabled>Stop</button>
+      <label class="row" style="font-weight:400;font-size:13px;margin-left:6px">
+        <input type="checkbox" id="freshOrg"> fresh org
+      </label>
+    </div>
+    <div class="banner" id="runBanner"></div>
+    <div id="log">Output appears here.</div>
+  </section>
+</main>
+
+<script>
+let STATE = null;
+
+/** Reads the current form values keyed by env var name. */
+function formValues() {
+  const values = {};
+  for (const setting of STATE.settings) {
+    const el = document.getElementById('f_' + setting.env);
+    if (!el) continue;
+    values[setting.env] = setting.type === 'boolean' ? String(el.checked) : el.value;
+  }
+  return values;
+}
+
+function renderForm() {
+  const form = document.getElementById('form');
+  form.innerHTML = '';
+  for (const group of STATE.groups) {
+    const fieldset = document.createElement('fieldset');
+    const legend = document.createElement('legend');
+    legend.textContent = group;
+    fieldset.appendChild(legend);
+
+    for (const setting of STATE.settings.filter(s => s.group === group)) {
+      const wrap = document.createElement('div');
+      wrap.className = 'field';
+      wrap.id = 'w_' + setting.env;
+
+      const label = document.createElement('label');
+      label.setAttribute('for', 'f_' + setting.env);
+      label.innerHTML = setting.label + ' <span class="env">' + setting.env + '</span>';
+
+      let input;
+      const value = STATE.values[setting.env] ?? setting.default;
+
+      if (setting.type === 'boolean') {
+        input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = ['true','1','yes','on'].includes(String(value).toLowerCase());
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.appendChild(input);
+        row.appendChild(label);
+        label.style.marginBottom = '0';
+        wrap.appendChild(row);
+      } else if (setting.type === 'select') {
+        input = document.createElement('select');
+        for (const option of setting.options || []) {
+          const o = document.createElement('option');
+          o.value = option;
+          o.textContent = option === '' ? '(default)' : option;
+          if (option === value) o.selected = true;
+          input.appendChild(o);
+        }
+        wrap.appendChild(label);
+        wrap.appendChild(input);
+      } else {
+        input = document.createElement('input');
+        input.type = setting.type === 'number' ? 'number' : 'text';
+        input.value = value;
+        if (setting.placeholder) input.placeholder = setting.placeholder;
+        wrap.appendChild(label);
+        wrap.appendChild(input);
+      }
+
+      input.id = 'f_' + setting.env;
+      input.addEventListener('change', validate);
+      input.addEventListener('input', () => { /* debounce-free: validation is cheap and local */ });
+
+      const desc = document.createElement('div');
+      desc.className = 'desc';
+      desc.textContent = setting.description;
+      wrap.appendChild(desc);
+
+      const msg = document.createElement('div');
+      msg.className = 'msg';
+      msg.id = 'm_' + setting.env;
+      wrap.appendChild(msg);
+
+      fieldset.appendChild(wrap);
+    }
+    form.appendChild(fieldset);
+  }
+}
+
+/** Asks the server to validate; the server applies the SAME rules the run will. */
+async function validate() {
+  const response = await fetch('/api/validate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ values: formValues() })
+  });
+  const { errors, warnings } = await response.json();
+
+  for (const setting of STATE.settings) {
+    const wrap = document.getElementById('w_' + setting.env);
+    const msg = document.getElementById('m_' + setting.env);
+    wrap.classList.remove('invalid');
+    msg.className = 'msg';
+    msg.textContent = '';
+    if (errors[setting.env]) {
+      wrap.classList.add('invalid');
+      msg.className = 'msg err';
+      msg.textContent = errors[setting.env];
+    } else if (warnings[setting.env]) {
+      msg.className = 'msg warn';
+      msg.textContent = warnings[setting.env];
+    }
+  }
+  return Object.keys(errors).length === 0;
+}
+
+function banner(id, kind, text) {
+  const el = document.getElementById(id);
+  el.className = 'banner ' + kind;
+  el.textContent = text;
+  if (!text) el.className = 'banner';
+}
+
+/** Classifies a log line so the run reads at a glance, mirroring the CLI's own symbols. */
+function lineClass(line) {
+  if (line.startsWith('▸')) return 'l-phase';
+  if (line.includes('✔')) return 'l-ok';
+  if (line.includes('✖') || line.includes('FAILED')) return 'l-err';
+  if (line.includes('!')) return 'l-warn';
+  if (line.includes('$ ')) return 'l-cmd';
+  if (line.includes('◦')) return 'l-skip';
+  return '';
+}
+
+function appendLog(line) {
+  const log = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = lineClass(line);
+  div.textContent = line;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function save() {
+  if (!(await validate())) { banner('formBanner', 'err', 'Fix the errors above first.'); return; }
+  const response = await fetch('/api/save', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ values: formValues() })
+  });
+  const body = await response.json();
+  if (!response.ok) { banner('formBanner', 'err', 'Could not save.'); return; }
+  banner('formBanner', 'ok', body.written.length
+    ? 'Saved ' + body.written.length + ' customised setting(s) to .env'
+    : 'Everything matches the defaults, so .env is empty.');
+}
+
+async function run(args) {
+  if (!(await validate())) { banner('formBanner', 'err', 'Fix the errors above first.'); return; }
+  document.getElementById('log').innerHTML = '';
+  banner('runBanner', '', '');
+  const response = await fetch('/api/run', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ values: formValues(), args })
+  });
+  if (!response.ok) {
+    const body = await response.json();
+    banner('runBanner', 'err', body.error || 'Could not start the run.');
+  }
+}
+
+async function loadState() {
+  STATE = await (await fetch('/api/state')).json();
+  document.getElementById('envpath').textContent = STATE.envPath;
+  renderForm();
+  const select = document.getElementById('profileSelect');
+  select.innerHTML = '<option value="">Profile…</option>';
+  for (const name of STATE.profiles) {
+    const option = document.createElement('option');
+    option.value = name; option.textContent = name;
+    select.appendChild(option);
+  }
+  await validate();
+}
+
+/* Wiring */
+document.getElementById('save').addEventListener('click', e => { e.preventDefault(); save(); });
+document.getElementById('run').addEventListener('click', e => {
+  e.preventDefault();
+  run(document.getElementById('freshOrg').checked ? ['--no-reuse'] : []);
+});
+document.getElementById('runVerify').addEventListener('click', e => { e.preventDefault(); run(['--only=verify']); });
+document.getElementById('stop').addEventListener('click', e => { e.preventDefault(); fetch('/api/stop', { method: 'POST' }); });
+
+document.getElementById('saveProfile').addEventListener('click', async e => {
+  e.preventDefault();
+  const name = document.getElementById('profileName').value.trim();
+  if (!name) { banner('formBanner', 'err', 'Give the profile a name.'); return; }
+  await fetch('/api/profiles/save', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, values: formValues() })
+  });
+  document.getElementById('profileName').value = '';
+  await loadState();
+  banner('formBanner', 'ok', 'Saved profile "' + name + '". Secrets are never stored in a profile.');
+});
+
+document.getElementById('loadProfile').addEventListener('click', async e => {
+  e.preventDefault();
+  const name = document.getElementById('profileSelect').value;
+  if (!name) return;
+  const response = await fetch('/api/profiles/load?name=' + encodeURIComponent(name));
+  const body = await response.json();
+  if (!response.ok) { banner('formBanner', 'err', body.error); return; }
+  Object.assign(STATE.values, body.values);
+  renderForm();
+  await validate();
+  banner('formBanner', 'ok', 'Loaded profile "' + name + '".');
+});
+
+document.getElementById('deleteProfile').addEventListener('click', async e => {
+  e.preventDefault();
+  const name = document.getElementById('profileSelect').value;
+  if (!name) return;
+  await fetch('/api/profiles/delete', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  await loadState();
+});
+
+/* Live run output */
+const events = new EventSource('/api/stream');
+events.addEventListener('started', () => {
+  banner('runBanner', '', '');
+  document.getElementById('run').disabled = true;
+  document.getElementById('runVerify').disabled = true;
+  document.getElementById('stop').disabled = false;
+});
+events.addEventListener('line', e => appendLog(JSON.parse(e.data).line));
+events.addEventListener('finished', e => {
+  const { code } = JSON.parse(e.data);
+  banner('runBanner', code === 0 ? 'ok' : 'err',
+    code === 0 ? 'Run finished successfully.' : 'Run failed (exit code ' + code + ').');
+  document.getElementById('run').disabled = false;
+  document.getElementById('runVerify').disabled = false;
+  document.getElementById('stop').disabled = true;
+});
+
+loadState();
+</script>
+</body>
+</html>

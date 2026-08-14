@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Omni-Channel is a hard prerequisite for Voice: an inbound call is delivered to a rep as an
+  Omni-Channel work item, so with Omni-Channel off the softphone can ring but nothing can be routed.
+
+  This is also set in config/project-scratch-def.json so the org is born with it enabled. It is
+  repeated here as a deployable component so that:
+    - re-running setup against an org created by other means still converges to the right state, and
+    - the deploy gives a named, actionable failure if the org refuses it.
+
+  Deploying an already-correct value is a no-op, so the duplication is safe.
+-->
+<OmniChannelSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <enableOmniChannel>true</enableOmniChannel>
+</OmniChannelSettings>

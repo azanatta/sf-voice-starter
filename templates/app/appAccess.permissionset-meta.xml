@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE granting visibility of the console app.
+
+  Rendered by src/phases/70-console-app.ts into app-src/ and deployed alongside the app itself.
+
+  WHY A PERMISSION SET RATHER THAN THE PROFILE
+  A custom app is invisible until something grants it, and the Setup UI does that by ticking the app
+  in a profile. Doing the same through metadata means deploying a Profile, which replaces the sections
+  it contains and is an easy way to clobber unrelated settings in an org you did not author.
+
+  A permission set is purely additive, assigns with one CLI call, and produces the identical outcome:
+  the app appears in the App Launcher for whoever holds it. Verified on a live org.
+
+  If you specifically need it on the profile instead, tick it in Setup after the run.
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment and the Metadata API rejects
+  the whole file. Avoid them when editing this header.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>{{APP_LABEL}} App Access</label>
+    <applicationVisibilities>
+        <application>{{APP_NAME}}</application>
+        <visible>true</visible>
+    </applicationVisibilities>
+</PermissionSet>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE for the console app's utility bar.
+
+  Rendered by src/phases/70-console-app.ts into app-src/ with its placeholder values substituted from
+  config, then deployed.
+
+  Two utility items, and both matter:
+
+    {{BRIDGE_COMPONENT}}  the telephony vendor's bridge, e.g. acme:AcmeVoiceBridge. This component
+                          lives INSIDE the vendor's managed package, so this FlexiPage cannot deploy
+                          into an org that does not have that package installed. That is why the
+                          console app phase runs after install-package, and why these files live in
+                          app-src/ rather than force-app/ (which is deployed much earlier).
+
+    omniWidget            Omni-Channel. Voice calls arrive as Omni-Channel work items, so without it
+                          a rep has nothing to accept.
+
+  The `eager` property is what the Setup UI calls "Start automatically". With it false the bridge
+  only loads when a rep clicks the utility, which means calls can be missed until they do.
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment and the Metadata API rejects
+  the whole file. Avoid them when editing this header.
+-->
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>eager</name>
+                    <type>decorator</type>
+                    <value>{{BRIDGE_EAGER}}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>height</name>
+                    <type>decorator</type>
+                    <value>{{BRIDGE_HEIGHT}}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>icon</name>
+                    <type>decorator</type>
+                    <value>fallback</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <type>decorator</type>
+                    <value>{{BRIDGE_LABEL}}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>scrollable</name>
+                    <type>decorator</type>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <type>decorator</type>
+                    <value>{{BRIDGE_WIDTH}}</value>
+                </componentInstanceProperties>
+                <componentName>{{BRIDGE_COMPONENT}}</componentName>
+                <identifier>{{BRIDGE_IDENTIFIER}}</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>runtime_service_omnichannel:omniWidget</componentName>
+                <identifier>runtime_service_omnichannel_omniWidget</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>utilityItems</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <name>backgroundComponents</name>
+        <type>Background</type>
+    </flexiPageRegions>
+    <masterLabel>{{APP_LABEL}} UtilityBar</masterLabel>
+    <template>
+        <name>one:utilityBarTemplateDesktop</name>
+        <properties>
+            <name>isLeftAligned</name>
+            <value>true</value>
+        </properties>
+    </template>
+    <type>UtilityBar</type>
+</FlexiPage>

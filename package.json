@@ -1,0 +1,27 @@
+{
+  "name": "sf-voice-starter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Prepares a Salesforce scratch org with the configuration required to install a Service Cloud Voice (Partner Telephony / BYOT) managed package on top, then optionally installs it and completes post-install configuration.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "tsx src/cli.ts",
+    "setup:headed": "tsx src/cli.ts --headed",
+    "verify": "tsx src/cli.ts --only=verify",
+    "delete-org": "tsx src/cli.ts --delete",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "playwright install chromium",
+    "configure": "tsx tools/config-server.ts",
+    "env-example": "tsx tools/config-server.ts --write-env-example"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

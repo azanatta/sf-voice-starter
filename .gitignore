@@ -1,0 +1,96 @@
+# ---------------------------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------------------------
+node_modules/
+
+# ---------------------------------------------------------------------------------------------
+# Salesforce CLI local state
+#
+# Contains org ids, usernames, access tokens and per-org source tracking for every scratch org
+# this machine has touched. Never commit.
+# ---------------------------------------------------------------------------------------------
+.sf/
+.sfdx/
+.localdevserver/
+
+# ---------------------------------------------------------------------------------------------
+# Playwright output
+#
+# artifacts/ holds screenshots of live Setup pages — they routinely show org domains, usernames
+# and the telephony provider picker. Regenerated on every run.
+# ---------------------------------------------------------------------------------------------
+artifacts/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# ---------------------------------------------------------------------------------------------
+# Secrets and machine-specific overrides
+#
+# .env.example IS committed (it is generated from config/settings-schema.ts by `npm run
+# env-example`) and carries no values — only .env and its variants are ignored.
+# ---------------------------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+
+# Private keys and certificates. This project creates certificates in the org; nothing here should
+# ever hold key material, so these patterns exist as a backstop rather than a routine exclusion.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# ---------------------------------------------------------------------------------------------
+# Build / run output — regenerated, never a source of truth
+# ---------------------------------------------------------------------------------------------
+
+# Metadata rendered from templates/ at runtime, plus every probe/retrieve the phases perform.
+# Carries whatever vendor namespace and endpoints the last run was configured with.
+generated/
+
+# Rendered from templates/app/ and templates/csp/ by the console-app and CSP phases, using values
+# from your configuration. The templates are the source of truth; this is per-run output and will
+# contain your telephony provider's component name and domains.
+app-src/main/default/
+
+# ---------------------------------------------------------------------------------------------
+# Your telephony provider's data — deliberately kept out of the repo
+# ---------------------------------------------------------------------------------------------
+
+# Real contact center definitions carry your provider's product names, endpoints, tenant and (once
+# filled in) certificate details. The committed example file is the only exception.
+vendor/*.xml
+!vendor/*.example.xml
+
+# Saved configuration profiles from `npm run configure`. These pin real package version ids, org
+# aliases, provider namespaces and CSP domains for the environments you actually use. Secrets are
+# never written into them, but the rest is still your and your provider's business — keep it local.
+config/profiles.json
+
+# ---------------------------------------------------------------------------------------------
+# Working notes
+#
+# docs/ is a local scratch area for implementation notes and roadmaps. Anything meant for readers
+# of this repo belongs in README.md; drop this line only after checking what is in there.
+# ---------------------------------------------------------------------------------------------
+docs/
+
+# ---------------------------------------------------------------------------------------------
+# Tooling and editors
+# ---------------------------------------------------------------------------------------------
+.claude/settings.local.json
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# macOS / Windows
+.DS_Store
+Thumbs.db

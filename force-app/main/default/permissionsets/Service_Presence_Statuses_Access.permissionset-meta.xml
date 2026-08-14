@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Grants access to the Online and Busy presence statuses.
+
+  Presence statuses are not usable just because they exist: a user can only select a status that a
+  permission set (or their profile) grants them. Without this, the softphone shows no status to go
+  Online with and the rep cannot receive calls, even though everything else is configured.
+
+  The two statuses are deployed alongside this file from
+  force-app/main/default/servicePresenceStatuses/. Their API names are their labels, so renaming a
+  status means renaming it here too.
+
+  DO NOT REMOVE the <enabled>true</enabled> lines. `enabled` is a REQUIRED sub-field of
+  servicePresenceStatusAccesses, but omitting it does not fail the deploy: the permission set is
+  created and reported as Succeeded while granting access to nothing at all. Observed exactly that,
+  so if a rep cannot pick a status, check that these lines are still here first.
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment and the Metadata API rejects
+  the whole file. Avoid them when editing this header.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Service Presence Statuses Access</label>
+    <servicePresenceStatusAccesses>
+        <enabled>true</enabled>
+        <servicePresenceStatus>Online</servicePresenceStatus>
+    </servicePresenceStatusAccesses>
+    <servicePresenceStatusAccesses>
+        <enabled>true</enabled>
+        <servicePresenceStatus>Busy</servicePresenceStatus>
+    </servicePresenceStatusAccesses>
+</PermissionSet>

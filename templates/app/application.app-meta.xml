@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE for the Lightning console app that hosts the softphone.
+
+  Rendered by src/phases/70-console-app.ts into app-src/ with its placeholder values substituted from
+  config, then deployed. Do not deploy this file directly; the tokens are not valid metadata.
+
+  Retrieved from a working org rather than hand-written, so it matches what Salesforce actually
+  produces. Notable fields:
+
+    navType Console        the softphone only renders in a CONSOLE app, not a standard one
+    utilityBar             points at the FlexiPage carrying Omni-Channel and the vendor bridge
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment and the Metadata API rejects
+  the whole file. Avoid them when editing this header.
+-->
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <brand>
+        <headerColor>#0070D2</headerColor>
+        <shouldOverrideOrgTheme>false</shouldOverrideOrgTheme>
+    </brand>
+    <formFactors>Small</formFactors>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>false</isNavPersonalizationDisabled>
+    <isNavTabPersistenceDisabled>false</isNavTabPersistenceDisabled>
+    <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
+    <label>{{APP_LABEL}}</label>
+    <navType>Console</navType>
+    <uiType>Lightning</uiType>
+    <utilityBar>{{APP_NAME}}_UtilityBar</utilityBar>
+    <workspaceConfig/>
+</CustomApplication>

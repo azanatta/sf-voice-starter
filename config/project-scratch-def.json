@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/forcedotcom/schemas/main/scratch-org-def.schema.json",
+  "orgName": "SCV Partner Telephony Dev",
+  "edition": "Developer",
+  "features": [
+    "ServiceCloud",
+    "ServiceUser",
+    "LightningServiceConsole",
+    "ServiceCloudVoicePartnerTelephony:2",
+    "Scrt2Conversation",
+    "BYOOTT:2"
+  ],
+  "settings": {
+    "omniChannelSettings": {
+      "enableOmniChannel": true
+    },
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    }
+  }
+}
+
+

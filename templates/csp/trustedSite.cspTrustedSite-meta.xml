@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE for a CSP Trusted Site (Setup / Security / Trusted URLs).
+
+  Rendered by src/phases/22-csp-trusted-sites.ts into app-src/ once per configured URL, with its
+  placeholder values substituted from config, then deployed.
+
+  Managed packages that load scripts, fonts, media or iframes from their own domains need those
+  domains listed here, otherwise the browser's Content Security Policy blocks them and the component
+  fails in ways that look like a broken package rather than a missing setting.
+
+  Salesforce requires AT LEAST ONE of the canAccess or isApplicableTo fields to be true; a site with
+  all of them false is rejected.
+
+  canAccessMicrophone additionally requires enablePermissionsPolicy in SecuritySettings, which the
+  phase deploys automatically when microphone or camera access is requested. For a softphone the
+  microphone is usually the whole point.
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment and the Metadata API rejects
+  the whole file. Avoid them when editing this header.
+-->
+<CspTrustedSite xmlns="http://soap.sforce.com/2006/04/metadata">
+    <canAccessCamera>{{CAN_CAMERA}}</canAccessCamera>
+    <canAccessMicrophone>{{CAN_MICROPHONE}}</canAccessMicrophone>
+    <context>{{CONTEXT}}</context>
+    <description>{{DESCRIPTION}}</description>
+    <endpointUrl>{{ENDPOINT_URL}}</endpointUrl>
+    <isActive>true</isActive>
+    <isApplicableToConnectSrc>{{CONNECT_SRC}}</isApplicableToConnectSrc>
+    <isApplicableToFontSrc>{{FONT_SRC}}</isApplicableToFontSrc>
+    <isApplicableToFrameSrc>{{FRAME_SRC}}</isApplicableToFrameSrc>
+    <isApplicableToImgSrc>{{IMG_SRC}}</isApplicableToImgSrc>
+    <isApplicableToMediaSrc>{{MEDIA_SRC}}</isApplicableToMediaSrc>
+    <isApplicableToStyleSrc>{{STYLE_SRC}}</isApplicableToStyleSrc>
+</CspTrustedSite>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  EXAMPLE contact center definition, in the Setup *import* format.
+
+  This is a structurally faithful sample with entirely made-up values. It is here so a fresh clone
+  shows the shape phase 60 expects; it is NOT installable against any real telephony provider.
+
+  Use your own provider's file instead: copy it to vendor/contact-center.xml (gitignored) or point
+  SCV_CC_DEFINITION_FILE at it. Your provider ships theirs with their install guide.
+
+  Note this is NOT the Metadata API `CallCenter` format (`<CallCenter xmlns=…>` with
+  <sections>/<items>). The two are not interchangeable — see vendor/README.md for why the file is
+  uploaded through the Setup wizard rather than deployed.
+
+  Phase 60 reads two values out of this file automatically:
+    reqVendorInfoApiName  → which telephony provider to select in the wizard
+    reqInternalName       → the idempotency check, so a re-run does not import a second copy
+
+  Phase 55 substitutes three more before import: the certificate name, the certificate PEM (the
+  wizard's "Public Key" field) and the Ready / Not Ready presence status ids.
+-->
+<callCenter>
+    <!-- General Info Section. This is a required section. -->
+    <section sortOrder="0" name="reqGeneralInfo" label="General Information">
+        <item sortOrder="0" name="reqInternalName" label="InternalName">AcmeContactCenter</item>
+        <item sortOrder="1" name="reqDisplayName" label="Display Name">Acme Telephony Contact Center</item>
+
+        <!-- Full API name of the ConversationVendorInfo component in the installed managed package.
+             Any namespace prefix is stripped and matched against ConversationVendorInfo.DeveloperName. -->
+        <item sortOrder="2" name="reqVendorInfoApiName" label="Conversation Vendor Info Developer Name">acme__acmeTelephony</item>
+    </section>
+
+    <!-- SCV Settings. This is a required section. -->
+    <section sortOrder="1" name="reqHvcc" label="SCV Settings">
+        <!-- Left empty on purpose: phase 55 fills this with the generated certificate's PEM. -->
+        <item sortOrder="0" name="reqTelephonyIntegrationCertificate" label="Telephony Integration Certificate"></item>
+        <item sortOrder="1" name="reqLongDistPrefix" label="Long Distance Prefix"></item>
+    </section>
+
+    <!-- Everything below is vendor-defined. The names, labels and count of these items differ for
+         every telephony provider — treat this section as an illustration of the shape, not a spec. -->
+    <section sortOrder="2" name="vendorSettings" label="Acme Telephony Settings">
+        <item sortOrder="0" name="primaryUrl" label="Primary Server URL">https://pbx-a.example.com</item>
+        <item sortOrder="1" name="secondaryUrl" label="Secondary Server URL">https://pbx-b.example.com</item>
+        <item sortOrder="2" name="primaryPort" label="Primary Server Port">8445</item>
+        <item sortOrder="3" name="secondaryPort" label="Secondary Server Port">8445</item>
+        <item sortOrder="4" name="connectionTimeout" label="Connection timeout (seconds)">20</item>
+        <item sortOrder="5" name="pollIntervalOnError" label="Poll interval on connection loss">10</item>
+        <item sortOrder="6" name="maxConnectionRetries" label="Max connection attempts before failover">2</item>
+
+        <!-- Left empty on purpose: phase 55 fills this with the generated certificate's unique name. -->
+        <item sortOrder="7" name="certDevName" label="Certificate Unique Name"></item>
+
+        <!-- Placeholders on purpose: phase 55 replaces both with the real presence status ids. -->
+        <item sortOrder="8" name="readyStateId" label="Ready State Id">&lt;Presence Status Id&gt;</item>
+        <item sortOrder="9" name="notReadyStateId" label="Not Ready State Id">&lt;Presence Status Id&gt;</item>
+
+        <item sortOrder="10" name="defaultNotReadyReason" label="Default Not Ready Reason">&lt;Not Ready Reason&gt;</item>
+        <item sortOrder="11" name="presenceStateMaps" label="Presence State Mapping">&lt;Presence State Mapping&gt;</item>
+        <item sortOrder="12" name="voiceCallIdCallVar" label="Call Variable for the Voice Call Record Id">callVariable1</item>
+        <item sortOrder="13" name="vendorCallKeyCallVar" label="Call Variable for the Vendor Call Key"></item>
+        <item sortOrder="14" name="tenant" label="Tenant"></item>
+        <item sortOrder="15" name="dialingRegex" label="Dialing Phone Number Translation"></item>
+        <item sortOrder="16" name="requestTimeout" label="Request Timeout">10000</item>
+        <item sortOrder="17" name="mobileAgentOption" label="Mobile Agent Option">Disabled</item>
+        <item sortOrder="18" name="ssoFramePath" label="SSO Frame Path"></item>
+    </section>
+</callCenter>

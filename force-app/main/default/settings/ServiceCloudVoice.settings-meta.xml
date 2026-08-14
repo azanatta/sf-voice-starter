@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Service Cloud Voice org settings.
+
+  `enableSCVExternalTelephony` is the flag behind "Service Cloud Voice with Partner Telephony"
+  (a.k.a. BYOT / third-party telephony). Deploying this file is what turns Voice on; it is the
+  metadata equivalent of the "Turn on Voice with Partner Telephony" toggle under step 2 of
+  Setup / Salesforce Voice.
+
+  VERIFIED on a fresh scratch org: the flag read false, `sf project deploy start` reported success,
+  and a subsequent retrieve read true. No browser required. The setup script still verifies the
+  result and can repair it through the UI, but that path is a fallback, not the normal route.
+
+  `enableSCVBYOT` is the deprecated predecessor (API 52.0) and is deliberately not set here; setting
+  both is contradictory.
+
+  `enableServiceCloudVoice` is the *Amazon Connect* flag. It is intentionally left alone: turning it
+  on drags in the Amazon Connect provisioning path (AWS account linkage, tax registration number,
+  CloudFormation) that has nothing to do with a partner telephony package.
+
+  PREREQUISITE, and the failure it causes:
+  This deploy only means something in an org created with the ServiceCloudVoicePartnerTelephony,
+  Scrt2Conversation and BYOOTT scratch org features. Without them the Setup page for Voice does not
+  render at all, and Lightning's way of expressing that is not an error page but a permanent loading
+  spinner with a "Sorry to interrupt / CSS Error" banner.
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment, and the Metadata API
+  rejects the whole file with "The string ... is not permitted within comments." Use = for rules and
+  avoid double hyphens when editing this header.
+-->
+<ServiceCloudVoiceSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <enableSCVExternalTelephony>true</enableSCVExternalTelephony>
+</ServiceCloudVoiceSettings>
