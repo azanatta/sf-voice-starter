@@ -44,6 +44,79 @@ center → verification.
 
 ---
 
+## Usage
+
+```bash
+npm run setup                            # everything
+npm run setup -- --headed                # visible browser (how you debug a broken selector)
+npm run setup -- --list                  # list phases
+npm run setup -- --only=enable-voice     # one phase
+npm run setup -- --skip=install-package
+npm run setup -- --org=existing-alias    # operate on an org you already have
+npm run setup -- --no-reuse              # force a brand new scratch org
+npm run setup -- --delete                # delete the scratch org
+
+npm run verify                           # readiness checks only
+npm test                                 # the same checks as Playwright tests, plus a UI smoke test
+npm run typecheck
+```
+
+Phase names for `--only` and `--skip` are listed by `--list`, and explained in
+[What it does](#what-it-does) below.
+
+Artifacts (screenshots per UI phase, plus a screenshot on failure) land in `artifacts/`.
+
+---
+
+## Configuration
+
+```bash
+npm run configure          # form with validation, saved profiles, and live run output
+```
+
+Opens a local page on `127.0.0.1:4747` that renders every setting, validates it, writes `.env`, and
+can launch the run while streaming its output. Beyond convenience it buys three things:
+
+- **Validation before a six-minute run.** A malformed `04t` id, a missing vendor XML, or an internal
+  name that disagrees with the XML about to be imported are all caught in milliseconds instead of
+  minutes in.
+- **Named profiles** (`config/profiles.json`, gitignored) — "provider A", "provider B latest" — so
+  switching vendor or package version is one click. Secrets are deliberately never written to a
+  profile.
+- **Live progress**, with the closing manual follow-ups readable in the page rather than scrollback.
+
+### One schema, three consumers
+
+Every setting is defined once, in [`config/settings-schema.ts`](config/settings-schema.ts):
+
+```text
+settings-schema.ts ──┬──→ config/scv-setup.config.ts   (typed values the phases read)
+                     ├──→ .env.example                 (npm run env-example)
+                     └──→ the configuration UI form    (generated at request time)
+```
+
+A default written in the schema is therefore guaranteed to be the one the code uses, the one the docs
+quote, and the one the form shows. Adding a setting makes it appear in all three. **Do not** add a
+bare `process.env` read in `src/` — it defeats the whole arrangement.
+
+`.env.example` is generated; edit the schema, not the file.
+
+If you prefer files to forms, everything still works by editing `.env` by hand.
+
+The scratch org shape is [`config/project-scratch-def.json`](config/project-scratch-def.json), with
+its commentary in [`config/README-scratch-def.md`](config/README-scratch-def.md) (the CLI rejects
+unknown properties, so the JSON cannot carry comments of its own).
+
+### If your Dev Hub cannot provision the Voice features
+
+Some Dev Hubs are not entitled, and fail org creation with a bare `An unknown server error occurred`
+and no error code ([forcedotcom/cli#1495](https://github.com/forcedotcom/cli/issues/1495)). Phase 10
+detects that shape of failure, retries with the three Voice features stripped, and reports what it
+assumed — so you get an org rather than a dead run, along with a clear note that it cannot run Voice
+yet. The Dev Hub used to build this was entitled, so the fallback stays dormant.
+
+---
+
 ## What it does
 
 | Phase | Name | How | Why that way |
@@ -221,76 +294,6 @@ Setup renders fine **headless**, on the standard bundled Chromium.
   `ConversationVendorInfo` record that ships *inside* the vendor's managed package. Before
   installation the vendor picker in the wizard is empty. This is why a script cannot create the
   contact center as part of "preparing the org" — it is inherently post-install.
-
----
-
-## Usage
-
-```bash
-npm run setup                            # everything
-npm run setup -- --headed                # visible browser (how you debug a broken selector)
-npm run setup -- --list                  # list phases
-npm run setup -- --only=enable-voice     # one phase
-npm run setup -- --skip=install-package
-npm run setup -- --org=existing-alias    # operate on an org you already have
-npm run setup -- --no-reuse              # force a brand new scratch org
-npm run setup -- --delete                # delete the scratch org
-
-npm run verify                           # readiness checks only
-npm test                                 # the same checks as Playwright tests, plus a UI smoke test
-npm run typecheck
-```
-
-Artifacts (screenshots per UI phase, plus a screenshot on failure) land in `artifacts/`.
-
----
-
-## Configuration
-
-```bash
-npm run configure          # form with validation, saved profiles, and live run output
-```
-
-Opens a local page on `127.0.0.1:4747` that renders every setting, validates it, writes `.env`, and
-can launch the run while streaming its output. Beyond convenience it buys three things:
-
-- **Validation before a six-minute run.** A malformed `04t` id, a missing vendor XML, or an internal
-  name that disagrees with the XML about to be imported are all caught in milliseconds instead of
-  minutes in.
-- **Named profiles** (`config/profiles.json`, gitignored) — "provider A", "provider B latest" — so
-  switching vendor or package version is one click. Secrets are deliberately never written to a
-  profile.
-- **Live progress**, with the closing manual follow-ups readable in the page rather than scrollback.
-
-### One schema, three consumers
-
-Every setting is defined once, in [`config/settings-schema.ts`](config/settings-schema.ts):
-
-```text
-settings-schema.ts ──┬──→ config/scv-setup.config.ts   (typed values the phases read)
-                     ├──→ .env.example                 (npm run env-example)
-                     └──→ the configuration UI form    (generated at request time)
-```
-
-A default written in the schema is therefore guaranteed to be the one the code uses, the one the docs
-quote, and the one the form shows. Adding a setting makes it appear in all three. **Do not** add a
-bare `process.env` read in `src/` — it defeats the whole arrangement.
-
-`.env.example` is generated; edit the schema, not the file.
-
-If you prefer files to forms, everything still works by editing `.env` by hand.
-
-The scratch org shape is [`config/project-scratch-def.json`](config/project-scratch-def.json), with
-its commentary in [`config/README-scratch-def.md`](config/README-scratch-def.md) (the CLI rejects
-unknown properties, so the JSON cannot carry comments of its own).
-
-### If your Dev Hub cannot provision the Voice features
-
-Some Dev Hubs are not entitled, and fail org creation with a bare `An unknown server error occurred`
-and no error code ([forcedotcom/cli#1495](https://github.com/forcedotcom/cli/issues/1495)). Phase 10
-detects that shape of failure, retries with the three Voice features stripped, and reports what it
-assumed — so you get an org rather than a dead run, along with a clear note that it cannot run Voice
-yet. The Dev Hub used to build this was entitled, so the fallback stays dormant.
 
 ---
 
