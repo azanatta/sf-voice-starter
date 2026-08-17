@@ -40,10 +40,14 @@ export const renderContactCenterPhase: Phase = {
   id: 'render-contact-center',
   title: 'Fill the contact center XML with this org\'s certificate and presence status ids',
 
-  enabled: (ctx) => ctx.config.contactCenter.create,
+  // No XML configured means there is nothing to render. Guarding here rather than inside run()
+  // matters: `resolve(cwd, '')` is the working directory, which exists, so the existsSync check
+  // below would pass and readFileSync would then fail with EISDIR.
+  enabled: (ctx) =>
+    ctx.config.contactCenter.create && ctx.config.contactCenter.definitionFile.trim() !== '',
 
   async run(ctx: PhaseContext) {
-    const source = resolve(process.cwd(), ctx.config.contactCenter.definitionFile);
+    const source = resolve(process.cwd(), ctx.config.contactCenter.definitionFile.trim());
     if (!existsSync(source)) {
       ctx.log.skip('No vendor XML to render');
       return;

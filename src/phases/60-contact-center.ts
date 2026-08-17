@@ -64,6 +64,13 @@ export const contactCenterPhase: Phase = {
     const xmlPath = useRendered ? RENDERED_XML_PATH : ctx.config.contactCenter.definitionFile.trim();
     const xmlFullPath = useRendered ? renderedPath : resolve(process.cwd(), xmlPath);
 
+    // Nothing rendered and nothing configured: there is no file to import. Without this the empty
+    // path would resolve to the working directory and the upload would fail deep in the wizard.
+    if (!useRendered && xmlPath === '') {
+      ctx.log.skip('No contact center XML configured');
+      return;
+    }
+
     if (!useRendered) {
       ctx.log.warn(
         'Importing the vendor XML unrendered — certificate name and presence status ids will keep ' +

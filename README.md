@@ -22,10 +22,10 @@ sf org login web --set-default-dev-hub --alias scvhub
 # 2. Install dependencies (also downloads the Chromium build Playwright uses)
 npm install
 
-# 3. (optional) drop in your vendor's contact center definition
-#    vendor/contact-center.example.xml shows the expected format; yours comes from your
-#    provider's install guide. Real definitions are gitignored.
-cp /path/from/your/vendor/ContactCenter.xml vendor/contact-center.xml
+# 3. (optional) point at your provider's contact center definition XML, which ships with
+#    their install guide. Anything under vendor/ is gitignored, so it is a safe place to
+#    keep it. Leave SCV_CC_DEFINITION_FILE empty to skip the contact center phases.
+export SCV_CC_DEFINITION_FILE=vendor/contact-center.xml
 
 # 4. Configure and run — either through the local UI...
 npm run configure         # form with validation, profiles, and live run output

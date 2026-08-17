@@ -397,10 +397,11 @@ export const SETTINGS: Setting[] = [
     env: 'SCV_CC_DEFINITION_FILE',
     label: 'Vendor XML',
     description:
-      'The vendor\'s contact center definition. The provider and internal name are read out of this file.',
+      'Path to your telephony provider\'s contact center definition XML, in the Setup import format. The provider and internal name are read out of this file. Leave empty to skip the contact center phases.',
     type: 'file',
-    default: 'vendor/contact-center.xml',
+    default: '',
     group: 'Contact center',
+    placeholder: 'vendor/contact-center.xml',
   },
   {
     env: 'SCV_VENDOR_INFO',

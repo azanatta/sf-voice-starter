@@ -60,10 +60,11 @@ app-src/main/default/
 # Your telephony provider's data — deliberately kept out of the repo
 # ---------------------------------------------------------------------------------------------
 
-# Real contact center definitions carry your provider's product names, endpoints, tenant and (once
-# filled in) certificate details. The committed example file is the only exception.
-vendor/*.xml
-!vendor/*.example.xml
+# Contact center definitions carry your provider's product names, endpoints, tenant and (once filled
+# in) certificate details. The repo no longer ships anything under vendor/, but the directory stays a
+# convenient place to keep your own file — ignored wholesale so nothing in it can be committed by
+# accident. Point SCV_CC_DEFINITION_FILE at whatever path you actually use.
+vendor/
 
 # Saved configuration profiles from `npm run configure`. These pin real package version ids, org
 # aliases, provider namespaces and CSP domains for the environments you actually use. Secrets are
