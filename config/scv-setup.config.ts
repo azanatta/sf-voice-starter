@@ -214,6 +214,34 @@ export interface ScvSetupConfig {
     styleSrc: boolean;
   };
 
+  remoteSites: {
+    /**
+     * Remote Site Settings (Setup → Security → Remote Site Settings).
+     *
+     * The SERVER side allow list: anything the ORG calls out to — Apex callouts, a vendor's REST API
+     * — is refused unless its host is listed. Distinct from `csp.sites` above, which is the BROWSER
+     * side allow list; a telephony package usually needs entries in both, and they are rarely the
+     * same hosts.
+     *
+     * Each entry is either `https://example.com` or `My_Name|https://example.com`. Without an
+     * explicit name one is derived from the URL.
+     *
+     * The org's own SCRT2 endpoint does NOT belong here — see `addScrtSite`.
+     */
+    sites: string[];
+    /**
+     * Add the org's own SCRT2 endpoint automatically, derived from its instance URL by replacing
+     * `.my.salesforce.com` with `.my.salesforce-scrt.com`.
+     *
+     * Voice calls are carried over SCRT2 and every org — every scratch org this project creates —
+     * has a different host, so this is the one entry that cannot be written into configuration ahead
+     * of time. Which is exactly why it is the one most often missing. Leave it on.
+     */
+    addScrtSite: boolean;
+    /** Description stored on every remote site created. */
+    description: string;
+  };
+
   certificate: {
     /**
      * Whether to create a self-signed certificate for the contact center to reference as its
@@ -386,6 +414,12 @@ export const config: ScvSetupConfig = {
     imgSrc: envBool('SCV_CSP_IMG_SRC'),
     mediaSrc: envBool('SCV_CSP_MEDIA_SRC'),
     styleSrc: envBool('SCV_CSP_STYLE_SRC'),
+  },
+
+  remoteSites: {
+    sites: envList('SCV_REMOTE_SITES'),
+    addScrtSite: envBool('SCV_REMOTE_SITE_ADD_SCRT'),
+    description: env('SCV_REMOTE_SITE_DESCRIPTION'),
   },
 
   certificate: {

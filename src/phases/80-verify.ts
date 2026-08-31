@@ -15,6 +15,7 @@ import { requireOrg, type Phase, type PhaseContext } from '../types.js';
 import { certificateExists } from './25-certificate.js';
 import { isVoiceEnabled } from './30-enable-voice.js';
 import { RENDERED_XML_PATH } from './55-render-contact-center.js';
+import { sameUrl, scrtUrlFor } from '../urls.js';
 
 interface Check {
   name: string;
@@ -241,6 +242,40 @@ const checks: Check[] = [
       return {
         ok: missing.length === 0,
         detail: missing.length === 0 ? `${urls.length} site(s) present` : `missing: ${missing.join(', ')}`,
+      };
+    },
+  },
+  {
+    name: 'Remote site settings deployed',
+    probe: 'SELECT SiteName, EndpointUrl FROM RemoteProxy (Tooling API)',
+    blocking: false,
+    async run(ctx) {
+      const org = requireOrg(ctx);
+      const wanted = ctx.config.remoteSites.sites.map((entry) =>
+        (entry.includes('|') ? entry.slice(entry.indexOf('|') + 1) : entry).trim(),
+      );
+      // The SCRT2 endpoint is the one the setup adds by itself, so it is also the one worth checking
+      // independently: nothing in the configuration would reveal its absence.
+      const scrtUrl = ctx.config.remoteSites.addScrtSite ? scrtUrlFor(org.instanceUrl) : undefined;
+      if (scrtUrl) wanted.push(scrtUrl);
+      if (wanted.length === 0) return { ok: true, detail: 'none configured' };
+
+      // RemoteProxy is Tooling-only — it is not queryable through the normal REST API.
+      const result = await query<{ EndpointUrl: string }>(
+        org.username,
+        'SELECT SiteName, EndpointUrl FROM RemoteProxy',
+        { useToolingApi: true },
+      ).catch(() => undefined);
+      if (!result) return { ok: false, detail: 'RemoteProxy is not queryable' };
+
+      const present = result.records.map((record) => record.EndpointUrl);
+      const missing = wanted.filter((url) => !present.some((existing) => sameUrl(existing, url)));
+      return {
+        ok: missing.length === 0,
+        detail:
+          missing.length === 0
+            ? `${wanted.length} site(s) present${scrtUrl ? `, including SCRT2 (${scrtUrl})` : ''}`
+            : `missing: ${missing.join(', ')}`,
       };
     },
   },

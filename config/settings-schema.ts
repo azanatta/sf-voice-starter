@@ -258,6 +258,47 @@ export const SETTINGS: Setting[] = [
     group: 'CSP trusted sites',
   },
 
+  /* --------------------------------------------------------------------- Remote site settings */
+  {
+    env: 'SCV_REMOTE_SITES',
+    label: 'Remote sites',
+    description:
+      'Hosts the ORG calls out to (Apex callouts, vendor REST APIs), comma-separated. Use "Name|https://url" to choose the API name. The org own SCRT2 endpoint is added automatically and does not belong here.',
+    type: 'list',
+    default: '',
+    group: 'Remote site settings',
+    placeholder: 'https://webexapis.com,https://api.example.com',
+    validate: (value) => {
+      if (value.trim() === '') return undefined;
+      for (const entry of value.split(',')) {
+        const raw = entry.includes('|') ? entry.slice(entry.indexOf('|') + 1) : entry;
+        const url = raw.trim();
+        if (url === '') continue;
+        if (!/^https?:\/\/[^\s]+$/i.test(url)) {
+          return `"${url}" must be an http:// or https:// URL including the scheme.`;
+        }
+      }
+      return undefined;
+    },
+  },
+  {
+    env: 'SCV_REMOTE_SITE_ADD_SCRT',
+    label: 'Add the org SCRT2 endpoint',
+    description:
+      'Derives <myDomain>.my.salesforce-scrt.com from the org URL and adds it automatically. Voice calls run over SCRT2 and every org has a different host, so this cannot be pre-configured. Leave on.',
+    type: 'boolean',
+    default: 'true',
+    group: 'Remote site settings',
+  },
+  {
+    env: 'SCV_REMOTE_SITE_DESCRIPTION',
+    label: 'Description',
+    description: 'Stored on every remote site created, so their origin is obvious in Setup.',
+    type: 'string',
+    default: 'Added by the SCV org setup script',
+    group: 'Remote site settings',
+  },
+
   /* ----------------------------------------------------------------------------- Certificate */
   {
     env: 'SCV_CREATE_CERTIFICATE',

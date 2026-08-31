@@ -125,6 +125,7 @@ yet. The Dev Hub used to build this was entitled, so the fallback stays dormant.
 | 10 | `create-org` | CLI | `sf org create scratch`. Reuses an existing org with the same alias by default. |
 | 20 | `deploy-settings` | Metadata | Settings, the Online/Busy presence statuses, and the permission set granting them. **This is what actually enables Voice.** |
 | 22 | `csp-trusted-sites` | Metadata | Trusted URLs the vendor package loads from, plus the permissions policy that microphone access needs. Skipped when none are configured. |
+| 24 | `remote-sites` | Metadata | Remote Site Settings the org calls out to. Always adds the org's own SCRT2 endpoint, derived from its instance URL. |
 | 25 | `certificate` | **Browser** | Generates the self-signed certificate the contact center references as its public key. |
 | 30 | `enable-voice` | CLI, **browser only on failure** | Verifies Voice is really on; repairs via the Setup toggle if the deploy did not take. |
 | 40 | `permissions` | CLI | Assigns the Voice permission set license and five permission sets. |
@@ -194,6 +195,32 @@ cannot be silently ineffective.
 
 Salesforce rejects a site with every directive switched off, so at least one of connect/font/frame/
 img/media/style or camera/microphone must stay on.
+
+### Remote site settings, and the SCRT2 endpoint you would otherwise forget
+
+Trusted URLs above are the *browser* side allow list. Remote Site Settings are the *server* side one:
+anything the org itself calls out to — Apex callouts, a vendor's REST API — is refused unless its host
+is listed, and the error names the URL but not the setting that blocked it. A telephony package
+normally needs entries in both lists, and they are rarely the same hosts, so they are configured
+separately (**Remote site settings** in the UI, or `SCV_REMOTE_SITES`).
+
+One entry cannot be configured ahead of time. Service Cloud Voice carries calls over SCRT2, reachable
+at the org's own My Domain with `.my.salesforce.com` replaced by `.my.salesforce-scrt.com`:
+
+    https://no-software-1234.scratch.my.salesforce.com
+      -> https://no-software-1234.scratch.my.salesforce-scrt.com
+
+Every org — so every scratch org this script creates — has a different one, which is exactly why it
+is the entry most often missing. The phase derives it from the org's instance URL and adds it as
+`Salesforce_SCRT2`, on a fresh org and on an existing one (`--org=<alias>`) alike. Nothing to
+configure; `SCV_REMOTE_SITE_ADD_SCRT=false` turns it off. If the instance URL is not a My Domain URL
+the phase warns and skips that entry rather than inventing a host that does not exist.
+
+Two platform limits worth knowing, both verified against a live org: a RemoteSiteSetting API name is
+capped at **40** characters (half what a trusted site allows, so long URLs get truncated names — use
+the `Name|https://url` form to choose your own), and the org rejects two remote sites carrying the
+same URL. A hand-configured entry duplicating the SCRT2 endpoint is therefore dropped in favour of
+the automatic one.
 
 ### The trap that makes phase 30 worth reading
 
@@ -339,6 +366,7 @@ Be clear about what has been proven against a live org and what has not.
 | Configuration UI | **Verified** — form renders from the schema, validation and SSE run streaming both work |
 | Console app + utility bar (phase 70) | **Verified** — deployed app is byte-identical to a hand-built one, and the namespace-strip trap is caught |
 | CSP trusted sites (phase 22) | **Verified** — 3 sites deployed and read back, `enablePermissionsPolicy` flipped to true |
+| Remote site settings (phase 24) | **Verified** — SCRT2 endpoint derived from the org URL, deployed and read back as `RemoteProxy`; re-run updates rather than duplicates. The derivation also reproduces the SCRT2 host of a live sandbox exactly |
 | Terms-of-service dialog handling | **Unobserved** — no dialog appeared on a Developer-edition org |
 | Phases 55→60→65 together | **Verified** — imported into a live org, all four fields confirmed on the Setup page |
 | Phases 25→30→40→55→60→65 from a fresh org | **Not yet** — every phase verified, but not in one run from `create-org` |

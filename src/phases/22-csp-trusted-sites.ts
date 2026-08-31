@@ -26,6 +26,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { resolve } from 'node:path';
 import { sf, SfCommandError } from '../sf.js';
 import { requireOrg, type Phase, type PhaseContext } from '../types.js';
+import { deriveApiName } from '../urls.js';
 
 const CSP_DIR = 'app-src/main/default/cspTrustedSites';
 const SETTINGS_DIR = 'app-src/main/default/settings';
@@ -80,21 +81,7 @@ function parseSite(entry: string): TrustedSite {
       url: entry.slice(separator + 1).trim(),
     };
   }
-  return { name: deriveName(entry.trim()), url: entry.trim() };
-}
-
-/**
- * Turns a URL into a valid metadata API name.
- *
- * API names allow letters, digits and underscores and cannot start with a digit — so the scheme is
- * dropped, every other illegal character becomes an underscore, and a leading digit gets a prefix.
- */
-export function deriveName(url: string): string {
-  const withoutScheme = url.replace(/^[a-z]+:\/\//i, '');
-  let name = withoutScheme.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  if (name === '') name = 'TrustedSite';
-  if (/^[0-9]/.test(name)) name = `Site_${name}`;
-  return name.slice(0, 80);
+  return { name: deriveApiName(entry.trim()), url: entry.trim() };
 }
 
 function findDuplicateNames(names: string[]): string[] {

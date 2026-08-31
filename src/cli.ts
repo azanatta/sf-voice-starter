@@ -28,6 +28,7 @@ import { preflightPhase } from './phases/00-preflight.js';
 import { createOrgPhase } from './phases/10-create-org.js';
 import { deploySettingsPhase } from './phases/20-deploy-settings.js';
 import { cspTrustedSitesPhase } from './phases/22-csp-trusted-sites.js';
+import { remoteSiteSettingsPhase } from './phases/24-remote-site-settings.js';
 import { certificatePhase } from './phases/25-certificate.js';
 import { enableVoicePhase } from './phases/30-enable-voice.js';
 import { permissionsPhase } from './phases/40-permissions.js';
@@ -54,6 +55,7 @@ const PHASES: Phase[] = [
   createOrgPhase,
   deploySettingsPhase,
   cspTrustedSitesPhase,
+  remoteSiteSettingsPhase,
   certificatePhase,
   enableVoicePhase,
   permissionsPhase,

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE for a Remote Site Setting (Setup / Security / Remote Site Settings).
+
+  Rendered by src/phases/24-remote-site-settings.ts into app-src/ once per URL, with its placeholder
+  values substituted from config, then deployed.
+
+  Remote Site Settings are the SERVER side allow list: Apex callouts and platform integrations refuse
+  to reach a host that is not listed here. They are a different Setup node from Trusted URLs (CSP),
+  which is the BROWSER side allow list handled by phase 22, and a package usually needs both.
+
+  The org's own SCRT2 host is added automatically by the phase, derived from the instance URL, since
+  every org gets a different one.
+
+  NOTE ON XML COMMENTS: a double hyphen is illegal inside an XML comment and the Metadata API rejects
+  the whole file. Avoid them when editing this header.
+-->
+<RemoteSiteSetting xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>{{DESCRIPTION}}</description>
+    <disableProtocolSecurity>false</disableProtocolSecurity>
+    <isActive>true</isActive>
+    <url>{{URL}}</url>
+</RemoteSiteSetting>
