@@ -21,7 +21,7 @@
  * ============================================================================================
  */
 
-import type { Frame, Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Logger } from '../logger.js';
 
 /* -------------------------------------------------------------------------------------------------
@@ -143,64 +143,6 @@ export const voiceSettingsPage = {
     const confirm = dialog.getByRole('button', { name: /^(agree|accept|confirm|enable|ok|save)$/i });
     await confirm.first().click();
     log.success('Accepted the Voice terms of service');
-  },
-};
-
-/* -------------------------------------------------------------------------------------------------
- * Setup → Certificate and Key Management
- * ---------------------------------------------------------------------------------------------- */
-
-export const certificatePage = {
-  setupNode: 'CertificatesAndKeysManagement',
-
-  /**
-   * This is a CLASSIC Visualforce page embedded in the Lightning shell, so its controls live in an
-   * iframe and are invisible to locators resolved against the Page. Worse, several frames are
-   * present and only one holds the form — the outer Lightning frame also contains inputs (the global
-   * search box), so "the frame with inputs" is not a safe test.
-   *
-   * Both helpers below therefore locate the frame by a control that is unique to it.
-   */
-  async frameWithCreateButton(page: Page): Promise<Frame | undefined> {
-    for (const frame of page.frames()) {
-      const count = await frame
-        .locator('input[value="Create Self-Signed Certificate"]')
-        .count()
-        .catch(() => 0);
-      if (count > 0) return frame;
-    }
-    return undefined;
-  },
-
-  /** The form frame, identified by the MasterLabel field that only it contains. */
-  async frameWithForm(page: Page): Promise<Frame | undefined> {
-    for (const frame of page.frames()) {
-      const count = await frame.locator('input#MasterLabel').count().catch(() => 0);
-      if (count > 0) return frame;
-    }
-    return undefined;
-  },
-
-  createSelfSignedButton(frame: Frame): Locator {
-    return frame.locator('input[value="Create Self-Signed Certificate"]');
-  },
-
-  /**
-   * Field ids on the self-signed certificate form, VERIFIED by inspecting the rendered page:
-   *   input#MasterLabel     Label
-   *   input#DeveloperName   Unique Name
-   *   select#keysize        Key Size
-   *   input#exp             Exportable Private Key
-   *   input[name=save]      Save
-   *
-   * These are classic Visualforce ids, which are stable in a way Lightning's generated ids are not.
-   */
-  form: {
-    label: (frame: Frame): Locator => frame.locator('input#MasterLabel'),
-    developerName: (frame: Frame): Locator => frame.locator('input#DeveloperName'),
-    keySize: (frame: Frame): Locator => frame.locator('select#keysize'),
-    exportable: (frame: Frame): Locator => frame.locator('input#exp'),
-    save: (frame: Frame): Locator => frame.locator('input[name="save"]'),
   },
 };
 

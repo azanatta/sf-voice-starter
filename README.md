@@ -22,6 +22,9 @@ sf org login web --set-default-dev-hub --alias scvhub
 # 2. Install dependencies (also downloads the Chromium build Playwright uses)
 npm install
 
+# UI phases require Node.js 20 or later
+node --version
+
 # 3. (optional) point at your provider's contact center definition XML, which ships with
 #    their install guide. Anything under vendor/ is gitignored, so it is a safe place to
 #    keep it. Leave SCV_CC_DEFINITION_FILE empty to skip the contact center phases.
@@ -126,7 +129,7 @@ yet. The Dev Hub used to build this was entitled, so the fallback stays dormant.
 | 20 | `deploy-settings` | Metadata | Settings, the Online/Busy presence statuses, and the permission set granting them. **This is what actually enables Voice.** |
 | 22 | `csp-trusted-sites` | Metadata | Trusted URLs the vendor package loads from, plus the permissions policy that microphone access needs. Skipped when none are configured. |
 | 24 | `remote-sites` | Metadata | Remote Site Settings the org calls out to. Always adds the org's own SCRT2 endpoint, derived from its instance URL. |
-| 25 | `certificate` | **Browser** | Generates the self-signed certificate the contact center references as its public key. |
+| 25 | `certificate` | Metadata | Creates the self-signed certificate and Salesforce-held private key the contact center uses to sign requests. |
 | 30 | `enable-voice` | CLI, **browser only on failure** | Verifies Voice is really on; repairs via the Setup toggle if the deploy did not take. |
 | 40 | `permissions` | CLI | Assigns the Voice permission set license and five permission sets. |
 | 50 | `install-package` | CLI | `sf package install`. Skipped when no package id is set. |
@@ -140,14 +143,24 @@ Every phase is **idempotent** — re-running against a half-configured org conve
 failing. That matters because the interesting failures happen in phase 50 or later, and recreating
 the org each time to retry burns Dev Hub limits.
 
+### Self-signed certificate
+
+Phase 25 writes transient `Certificate` metadata from the configured label, key size, and exportable
+private-key option, plus the empty `.crt` companion file that the Salesforce source converter
+requires, then deploys them with `sf project deploy start`. With `caSigned=false`, Salesforce
+generates and retains the private key in the target org; the public `.crt` returned by the platform
+is later used to fill the contact center's `reqTelephonyIntegrationCertificate` field. The generated
+metadata and certificate are ignored by git and the phase is idempotent.
+
 ---
 
 ## Why the browser is used at all
 
-**Honest answer: for org preparation, it mostly isn't.** Enabling Voice is a metadata deploy, and it
-works. Verified on a fresh scratch org: `enableSCVExternalTelephony` read `false`,
-`sf project deploy start` reported success, a subsequent retrieve read `true` — no browser involved.
-A full `npm run setup` completes without launching Chromium at all.
+**Honest answer: for org preparation, it mostly isn't.** Enabling Voice and creating the self-signed
+certificate are metadata deploys. Verified on a fresh scratch org:
+`enableSCVExternalTelephony` read `false`, `sf project deploy start` reported success, and a
+subsequent retrieve read `true` — no browser involved. A setup run that stops before contact-center
+import completes without launching Chromium.
 
 Playwright earns its place in three narrower ways:
 
@@ -237,18 +250,18 @@ missing scratch org feature.
 ### How Playwright authenticates
 
 It does not automate the login form. That would mean storing a password, would break under MFA, and
-would not run in CI. Instead `src/session.ts` takes the access token the CLI already holds
-(`sf org display`) and POSTs it to `/secur/frontdoor.jsp` to exchange it for browser cookies.
+would not run in CI. Instead `src/session.ts` calls
+`sf org open --target-org <alias> --url-only` and navigates to the short-lived browser-login URL
+that the Salesforce CLI generates. This establishes the browser cookies using the same flow as
+opening the org from the CLI.
 
-No credentials exist anywhere in this repo. The token is sent in a POST body rather than a URL so it
-stays out of browser history and referrer headers, and `src/sf.ts` redacts token-shaped strings from
-logged command lines.
+No credentials exist anywhere in this repo. The generated URL contains a one-time login value, not
+the reusable API access token, and the script never logs that URL.
 
 Two non-obvious things this had to handle, both hit against real orgs:
 
-- The form submit must be **awaited to completion**. Submitting and merely waiting on a load state
-  returns while the page is still on `blank.html`, and the next `goto` then dies with
-  `net::ERR_ABORTED`.
+- The CLI login URL can land on `frontdoor.jsp` before the browser session is ready. The script waits
+  until that transition has completed before navigating to Setup.
 - `frontdoor.jsp` is not the last hop — it can bounce through `/secur/contentDoor` on a
   `*.file.force.com` domain. Navigating during that chain fails with *"interrupted by another
   navigation"*. `gotoSetup()` retries on both spellings.
@@ -358,7 +371,7 @@ Be clear about what has been proven against a live org and what has not.
 | `contact-center` import (phase 60) | **Verified** — imported a real vendor XML, `CallCenter` row confirmed by query |
 | Full clean run, org → contact center | **Verified** — ~6 minutes end to end |
 | Full idempotent re-run | **Verified** — every phase no-ops correctly, including install and import |
-| Certificate generation (phase 25) | **Verified** — created with the correct unique name |
+| Certificate generation (phase 25) | **Verified** — metadata deploy created a self-signed, usable certificate with the configured unique name and private key export setting |
 | Contact center Public Key + cert name + status ids | **Verified in the org** — all four fields populated on the imported contact center |
 | Presence statuses + permission set (phase 20) | **Verified** — both deployed, real ids returned |
 | XML substitution (phase 55) | **Verified locally** against the real vendor file: exactly 3 lines change |

@@ -23,7 +23,6 @@
 
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { gotoSetup } from '../session.js';
 import { sf } from '../sf.js';
 import { requireOrg, type Phase, type PhaseContext } from '../types.js';
 import { voiceSettingsPage } from '../ui/selectors.js';
@@ -150,6 +149,7 @@ async function waitForVoiceEnabled(ctx: PhaseContext): Promise<boolean> {
 /** Flips the "Turn on Voice with Partner Telephony" toggle in Setup → Salesforce Voice. */
 async function enableViaUi(ctx: PhaseContext): Promise<void> {
   const page = await ctx.ui();
+  const { gotoSetup } = await import('../session.js');
   await gotoSetup(page, voiceSettingsPage.setupNode, ctx.log);
 
   const toggle = voiceSettingsPage.partnerTelephonyToggle(page);

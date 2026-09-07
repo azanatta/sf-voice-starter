@@ -20,7 +20,6 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from '@playwright/test';
 import { config as baseConfig } from '../config/scv-setup.config.js';
 import { logger, style } from './logger.js';
-import { openAuthenticatedSession } from './session.js';
 import { sf, SfCommandError } from './sf.js';
 import type { Phase, PhaseContext } from './types.js';
 
@@ -152,6 +151,7 @@ async function main(): Promise<void> {
       if (page) return page;
       const org = ctx.org;
       if (!org) throw new Error('Cannot open a browser session before the target org is known.');
+      const { openAuthenticatedSession } = await import('./session.js');
       const session = await openAuthenticatedSession(org.username, config, logger);
       browser = session.browser;
       ctx.browser = session.browser;

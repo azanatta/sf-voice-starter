@@ -7,22 +7,20 @@
  * that. It requires storing a username and password, it breaks the moment MFA is enforced (which it
  * is, by default, on every org that matters), and it produces a script that cannot run in CI.
  *
- * Instead we reuse the session the CLI already holds. `sf org display` returns an `accessToken` and
- * an `instanceUrl`; posting them at `/secur/frontdoor.jsp` exchanges the token for browser cookies
- * and lands on an authenticated page. No credentials exist anywhere in this repo, MFA is irrelevant
- * because the CLI already satisfied it, and the same code runs headless.
+ * Instead we ask the CLI for its short-lived browser-login URL with `sf org open --url-only` and
+ * navigate to it. No credentials exist anywhere in this repo, MFA is irrelevant because the CLI
+ * already satisfied it, and the same code runs headless.
  *
  * SECURITY NOTE
  * -------------
- * The access token is a bearer credential. It is passed via a form POST body rather than a URL query
- * string so it does not end up in browser history, referrer headers or Playwright's trace of
- * navigations. `src/sf.ts` redacts anything token-shaped from logged command lines.
+ * The CLI-generated URL contains a short-lived one-time password rather than the reusable API access
+ * token. It is never logged; `src/sf.ts` logs only the command that generated it.
  */
 
 import { chromium, type Browser, type Page } from '@playwright/test';
 import type { ScvSetupConfig } from '../config/scv-setup.config.js';
 import type { Logger } from './logger.js';
-import { orgDisplay, type OrgDisplay } from './sf.js';
+import { orgDisplay, orgOpenUrl, type OrgDisplay } from './sf.js';
 
 export interface BrowserSession {
   browser: Browser;
@@ -60,39 +58,14 @@ export async function openAuthenticatedSession(
 
   const page = await context.newPage();
 
-  // Exchange the CLI's access token for browser session cookies.
-  //
-  // frontdoor.jsp accepts `sid` as a GET parameter too, but a GET puts the token in the URL bar and
-  // in every subsequent Referer header. A self-submitting form keeps it in the POST body.
-  await page.goto(`${org.instanceUrl}/blank.html`, { waitUntil: 'domcontentloaded' }).catch(() => {
-    // /blank.html does not exist on every instance; any same-origin document will do as the base
-    // from which to submit the form, so a 404 here is harmless.
-  });
+  const login = await orgOpenUrl(orgAlias, { onCommand: (c) => log.command(c) });
+  await page.goto(login.url, { waitUntil: 'domcontentloaded' });
 
-  // The form submission must be AWAITED to completion. Submitting and then merely waiting for a load
-  // state returns while the frontdoor navigation is still in flight — the page is still on
-  // blank.html — and the next `page.goto()` then aborts the in-flight navigation and fails with
-  // net::ERR_ABORTED. Racing the submit against `waitForURL` is what makes this deterministic.
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.endsWith('/blank.html'), {
+  if (isAuthenticationTransition(new URL(page.url()))) {
+    await page.waitForURL((url) => !isAuthenticationTransition(url), {
       timeout: config.runtime.navigationTimeoutMs,
-    }),
-    page.evaluate(
-      ({ instanceUrl, accessToken }) => {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `${instanceUrl}/secur/frontdoor.jsp`;
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'sid';
-        input.value = accessToken;
-        form.appendChild(input);
-        document.body.appendChild(form);
-        form.submit();
-      },
-      { instanceUrl: org.instanceUrl, accessToken: org.accessToken },
-    ),
-  ]);
+    });
+  }
 
   await page.waitForLoadState('domcontentloaded');
 
@@ -108,7 +81,7 @@ export async function openAuthenticatedSession(
   // A failed frontdoor exchange bounces to the login page instead of erroring, so check explicitly.
   // Catching it here turns a confusing "selector not found" 60 seconds later into an immediate,
   // accurate diagnosis.
-  if (/\/login\.jsp|\/secur\/logout\.jsp/.test(page.url())) {
+  if (await isLoginPage(page)) {
     await browser.close();
     throw new Error(
       `Session exchange failed for org "${orgAlias}" — the browser was redirected to the login page.\n` +
@@ -167,6 +140,24 @@ export async function gotoSetup(page: Page, node: string, log?: Logger): Promise
     // Some Setup pages hold long-poll connections open and never reach networkidle. Falling through
     // is correct — the individual step's own locator wait provides the real synchronisation.
   });
+
+  if (await isLoginPage(page)) {
+    throw new Error(
+      `Setup navigation to "${node}" was redirected to the Salesforce login page.\n` +
+        'The CLI session may have expired. Refresh it with:\n' +
+        '  sf org open --target-org <your-org-alias>\n' +
+        'Then re-run the setup command.',
+    );
+  }
+}
+
+async function isLoginPage(page: Page): Promise<boolean> {
+  if (/\/login\.jsp|\/secur\/logout\.jsp/.test(page.url())) return true;
+  return (await page.locator('#login_form, form[name="login"]').count()) > 0;
+}
+
+function isAuthenticationTransition(url: URL): boolean {
+  return url.pathname.endsWith('/secur/frontdoor.jsp') || url.pathname.endsWith('/secur/contentDoor');
 }
 
 /**

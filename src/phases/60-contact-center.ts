@@ -34,7 +34,6 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { gotoSetup } from '../session.js';
 import { query } from '../sf.js';
 import type { ScvSetupConfig } from '../../config/scv-setup.config.js';
 import { requireOrg, type Phase, type PhaseContext } from '../types.js';
@@ -274,6 +273,7 @@ function readItemFromXml(xmlPath: string, itemName: string): string | undefined 
 /** Drives the verified New → select vendor → Next → upload flow. */
 async function importViaWizard(ctx: PhaseContext, xmlPath: string, vendorLabel: string): Promise<void> {
   const page = await ctx.ui();
+  const { gotoSetup } = await import('../session.js');
   await gotoSetup(page, contactCenterPage.setupNode, ctx.log);
 
   ctx.log.step('Opening the New Partner Contact Center wizard');
