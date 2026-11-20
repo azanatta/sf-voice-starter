@@ -417,7 +417,7 @@ SCV_PACKAGE_VERSION_ID=<04t…> npm run setup -- --no-reuse
 
 ## License
 
-[MIT](LICENSE) © Alberto Zanatta. Fork it freely — the licence asks only that the copyright notice
+[MIT](LICENSE) © [Alberto Zanatta](https://albertozanatta.com). Fork it freely — the licence asks only that the copyright notice
 travels with it.
 
 Not affiliated with or endorsed by Salesforce. "Salesforce", "Service Cloud Voice" and related marks
