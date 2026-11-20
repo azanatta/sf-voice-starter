@@ -21,7 +21,7 @@
  * ============================================================================================
  */
 
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
@@ -140,12 +140,66 @@ function writeProfiles(profiles: Profiles): void {
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * `sf org display` takes many seconds, so it must never block the event loop, and a healthy result
+ * is cached so validating on every field change does not re-run it. Failures are not cached, so a
+ * re-authentication is picked up on the next validation. Concurrent checks share one process.
+ */
+const DEVHUB_OK_TTL_MS = 10 * 60 * 1000;
+const devHubOk = new Map<string, number>();
+const devHubInFlight = new Map<string, Promise<string | undefined>>();
+
+function checkDevHub(alias: string): Promise<string | undefined> {
+  const okAt = devHubOk.get(alias);
+  if (okAt !== undefined && Date.now() - okAt < DEVHUB_OK_TTL_MS) return Promise.resolve(undefined);
+
+  const pending = devHubInFlight.get(alias);
+  if (pending) return pending;
+
+  const check = new Promise<string | undefined>((done) => {
+    execFile(
+      'sf',
+      ['org', 'display', '--target-org', alias, '--json'],
+      {
+        encoding: 'utf8',
+        timeout: 60_000,
+        env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
+      },
+      (error, stdout) => {
+        // CAUTION: a non-zero exit is NOT the failure signal here. `sf org display` exits 0 for an
+        // org whose refresh token has expired and reports the problem only in
+        // `result.connectedStatus` ("Unable to refresh session due to: ..."). Checking the exit code
+        // alone silently passes exactly the case this check exists to catch.
+        if (error) {
+          done(error.killed ? 'the CLI check timed out' : 'not authenticated');
+          return;
+        }
+        try {
+          const parsed = JSON.parse(stdout) as { result?: { connectedStatus?: string } };
+          const status = parsed.result?.connectedStatus;
+          done(status && status !== 'Connected' ? status : undefined);
+        } catch {
+          done('could not read the CLI response');
+        }
+      },
+    );
+  }).then((problem) => {
+    devHubInFlight.delete(alias);
+    if (problem === undefined) devHubOk.set(alias, Date.now());
+    else devHubOk.delete(alias);
+    return problem;
+  });
+
+  devHubInFlight.set(alias, check);
+  return check;
+}
+
+/**
  * Checks that cannot live in the schema because they touch the filesystem.
  *
  * These are the ones worth catching before a six-minute run: a vendor XML that is not there, and an
  * internal name that disagrees with the file about to be imported.
  */
-function environmentChecks(values: Record<string, string>): Record<string, string> {
+async function environmentChecks(values: Record<string, string>): Promise<Record<string, string>> {
   const warnings: Record<string, string> = {};
 
   // The single most common way a run dies at second zero: an unauthenticated Dev Hub, or one whose
@@ -153,30 +207,7 @@ function environmentChecks(values: Record<string, string>): Record<string, strin
   // actually resolve it.
   const devHub = (values['SCV_DEVHUB_ALIAS'] ?? '').trim();
   if (devHub !== '') {
-    const check = spawnSync('sf', ['org', 'display', '--target-org', devHub, '--json'], {
-      encoding: 'utf8',
-      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
-    });
-
-    // CAUTION: a non-zero exit is NOT the failure signal here. `sf org display` exits 0 for an org
-    // whose refresh token has expired and reports the problem only in `result.connectedStatus`
-    // ("Unable to refresh session due to: ..."). Checking the exit code alone silently passes exactly
-    // the case this check exists to catch.
-    let problem: string | undefined;
-    if (check.status !== 0) {
-      problem = 'not authenticated';
-    } else {
-      try {
-        const parsed = JSON.parse(check.stdout) as {
-          result?: { connectedStatus?: string };
-        };
-        const status = parsed.result?.connectedStatus;
-        if (status && status !== 'Connected') problem = status;
-      } catch {
-        problem = 'could not read the CLI response';
-      }
-    }
-
+    const problem = await checkDevHub(devHub);
     if (problem) {
       warnings['SCV_DEVHUB_ALIAS'] =
         `${problem}. Re-authenticate with: sf org login web --set-default-dev-hub --alias ${devHub}`;
@@ -342,7 +373,7 @@ const server = createServer(async (request, response) => {
       const values = (body['values'] ?? {}) as Record<string, string>;
       sendJson(response, 200, {
         errors: validateAll(values),
-        warnings: environmentChecks(values),
+        warnings: await environmentChecks(values),
       });
       return;
     }

@@ -202,7 +202,11 @@ async function validate() {
     body: JSON.stringify({ values: formValues() })
   });
   const { errors, warnings } = await response.json();
+  showMessages(errors, warnings);
+  return Object.keys(errors).length === 0;
+}
 
+function showMessages(errors, warnings) {
   for (const setting of STATE.settings) {
     const wrap = document.getElementById('w_' + setting.env);
     const msg = document.getElementById('m_' + setting.env);
@@ -218,7 +222,6 @@ async function validate() {
       msg.textContent = warnings[setting.env];
     }
   }
-  return Object.keys(errors).length === 0;
 }
 
 function banner(id, kind, text) {
@@ -248,22 +251,27 @@ function appendLog(line) {
   log.scrollTop = log.scrollHeight;
 }
 
+/*
+ * Save and run do NOT wait for /api/validate: its environment checks (the Dev Hub lookup) can take
+ * many seconds. The server re-applies the schema rules on save/run and returns errors on 400.
+ */
 async function save() {
-  if (!(await validate())) { banner('formBanner', 'err', 'Fix the errors above first.'); return; }
   const response = await fetch('/api/save', {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ values: formValues() })
   });
   const body = await response.json();
-  if (!response.ok) { banner('formBanner', 'err', 'Could not save.'); return; }
+  if (!response.ok) {
+    if (body.errors) showMessages(body.errors, {});
+    banner('formBanner', 'err', body.errors ? 'Fix the errors above first.' : (body.error || 'Could not save.'));
+    return;
+  }
   banner('formBanner', 'ok', body.written.length
     ? 'Saved ' + body.written.length + ' customised setting(s) to .env'
     : 'Everything matches the defaults, so .env is empty.');
 }
 
 async function run(args) {
-  if (!(await validate())) { banner('formBanner', 'err', 'Fix the errors above first.'); return; }
-  document.getElementById('log').innerHTML = '';
   banner('runBanner', '', '');
   const response = await fetch('/api/run', {
     method: 'POST', headers: { 'content-type': 'application/json' },
@@ -271,7 +279,12 @@ async function run(args) {
   });
   if (!response.ok) {
     const body = await response.json();
+    if (body.errors) {
+      showMessages(body.errors, {});
+      banner('formBanner', 'err', 'Fix the errors above first.');
+    }
     banner('runBanner', 'err', body.error || 'Could not start the run.');
+    return;
   }
 }
 
@@ -286,7 +299,7 @@ async function loadState() {
     option.value = name; option.textContent = name;
     select.appendChild(option);
   }
-  await validate();
+  validate();
 }
 
 /* Wiring */
@@ -320,8 +333,8 @@ document.getElementById('loadProfile').addEventListener('click', async e => {
   if (!response.ok) { banner('formBanner', 'err', body.error); return; }
   Object.assign(STATE.values, body.values);
   renderForm();
-  await validate();
   banner('formBanner', 'ok', 'Loaded profile "' + name + '".');
+  validate();
 });
 
 document.getElementById('deleteProfile').addEventListener('click', async e => {
@@ -338,6 +351,7 @@ document.getElementById('deleteProfile').addEventListener('click', async e => {
 /* Live run output */
 const events = new EventSource('/api/stream');
 events.addEventListener('started', () => {
+  document.getElementById('log').innerHTML = '';
   banner('runBanner', '', '');
   document.getElementById('run').disabled = true;
   document.getElementById('runVerify').disabled = true;
