@@ -293,7 +293,7 @@ const checks: Check[] = [
           ok: false,
           detail:
             'not deployed: SCV_BRIDGE_COMPONENT is empty, so the console-app phase was skipped ' +
-            "(set it to the vendor package's bridge, e.g. cnxscv:CnxScvBridge)",
+            "(set it to the vendor package's bridge, e.g. acme:AcmeVoiceBridge)",
         };
       }
       // AppMenuItem.Name is not filterable — filtering returns zero rows rather than erroring.
