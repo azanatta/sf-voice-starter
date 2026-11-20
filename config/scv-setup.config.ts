@@ -66,6 +66,17 @@ function envList(name: string, fallback?: string): string[] {
     .filter((entry) => entry !== '');
 }
 
+/** The namespace when SCV_USE_NAMESPACE is on, otherwise undefined. Validated like the UI does. */
+function envNamespace(): string | undefined {
+  if (!envBool('SCV_USE_NAMESPACE')) return undefined;
+  const namespace = env('SCV_NAMESPACE');
+  const error = SETTINGS_BY_ENV.get('SCV_NAMESPACE')?.validate?.(namespace, {
+    SCV_USE_NAMESPACE: 'true',
+  });
+  if (error) throw new Error(`SCV_NAMESPACE: ${error}`);
+  return namespace;
+}
+
 export interface ScvSetupConfig {
   devHub: {
     /**
@@ -95,6 +106,12 @@ export interface ScvSetupConfig {
     edition?: string;
     /** Reuse an existing org with this alias instead of creating one, if it is still alive. */
     reuseIfExists: boolean;
+    /**
+     * Namespace prefix written into the generated `sfdx-project.json`, which `sf org create
+     * scratch` then applies to the org. Undefined means the org is created with `--no-namespace`.
+     * The namespace must be registered in a Developer Edition org linked to the Dev Hub.
+     */
+    namespace?: string;
   };
 
   voice: {
@@ -384,6 +401,7 @@ export const config: ScvSetupConfig = {
     definitionFile: env('SCV_SCRATCH_DEF', 'config/project-scratch-def.json'),
     edition: process.env['SCV_ORG_EDITION']?.trim() || undefined,
     reuseIfExists: envBool('SCV_REUSE_ORG'),
+    namespace: envNamespace(),
   },
 
   voice: {

@@ -32,6 +32,7 @@ export const createOrgPhase: Phase = {
 
     ctx.org = await createOrg(ctx);
     ctx.facts['Scratch org'] = `${ctx.org.username} (created)`;
+    ctx.facts['Namespace'] = ctx.config.scratchOrg.namespace ?? '(none)';
   },
 };
 
@@ -115,6 +116,8 @@ async function runCreate(ctx: PhaseContext, definitionFile: string): Promise<voi
       ctx.config.devHub.alias,
       '--duration-days',
       String(durationDays),
+      // With a namespace, the CLI reads it from the generated sfdx-project.json.
+      ...(ctx.config.scratchOrg.namespace ? [] : ['--no-namespace']),
       // Without this, the CLI leaves the previous default in place and later phases that omit
       // --target-org would silently act on the wrong org.
       '--set-default',

@@ -15,7 +15,7 @@
  * Exit codes: 0 success, 1 a phase failed, 2 bad usage.
  */
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Browser, Page } from '@playwright/test';
 import { config as baseConfig } from '../config/scv-setup.config.js';
@@ -128,6 +128,7 @@ async function main(): Promise<void> {
   if (options.orgOverride) config.scratchOrg.alias = options.orgOverride;
 
   mkdirSync(resolve(process.cwd(), config.runtime.artifactDir), { recursive: true });
+  renderProjectFile(config.scratchOrg.namespace);
 
   if (options.deleteOrg) {
     await deleteOrg(config.scratchOrg.alias);
@@ -216,6 +217,22 @@ async function main(): Promise<void> {
   printSummary(ctx, started, failed);
 
   if (failed) process.exitCode = 1;
+}
+
+/**
+ * Renders `sfdx-project.json` from `templates/project/sfdx-project.json` with the configured
+ * namespace. Every `sf` command in the phases (org creation included) reads it from the cwd.
+ */
+function renderProjectFile(namespace: string | undefined): void {
+  const project = JSON.parse(
+    readFileSync(resolve(process.cwd(), 'templates/project/sfdx-project.json'), 'utf8'),
+  ) as Record<string, unknown>;
+  project['namespace'] = namespace ?? '';
+  writeFileSync(
+    resolve(process.cwd(), 'sfdx-project.json'),
+    `${JSON.stringify(project, null, 2)}\n`,
+    'utf8',
+  );
 }
 
 async function screenshot(page: Page, dir: string, name: string): Promise<void> {

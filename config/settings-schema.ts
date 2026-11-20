@@ -39,8 +39,9 @@ export interface Setting {
   /**
    * Client- and server-side validation. Returns an error message, or undefined when valid.
    * Kept here so the UI, the `.env` writer and a pre-run check all apply the SAME rule.
+   * `values` holds every setting (defaults applied), for rules that depend on another field.
    */
-  validate?: (value: string) => string | undefined;
+  validate?: (value: string, values: Record<string, string>) => string | undefined;
   /** Marks values that must never be echoed back to the UI or written to logs. */
   secret?: boolean;
   /** Free-text hint shown as a placeholder. */
@@ -123,6 +124,33 @@ export const SETTINGS: Setting[] = [
     type: 'boolean',
     default: 'true',
     group: 'Scratch org',
+  },
+  {
+    env: 'SCV_USE_NAMESPACE',
+    label: 'Create with namespace',
+    description:
+      'Off: the org is created with --no-namespace (-m). On: the namespace below is written into sfdx-project.json and the org is created with it. The namespace must be linked to the Dev Hub.',
+    type: 'boolean',
+    default: 'false',
+    group: 'Scratch org',
+  },
+  {
+    env: 'SCV_NAMESPACE',
+    label: 'Namespace',
+    description: 'Namespace prefix used when "Create with namespace" is on. Ignored otherwise.',
+    type: 'string',
+    default: '',
+    group: 'Scratch org',
+    placeholder: 'acme',
+    validate: (value, values) => {
+      if (!['true', '1', 'yes', 'on'].includes((values['SCV_USE_NAMESPACE'] ?? '').toLowerCase())) {
+        return undefined;
+      }
+      if (value.trim() === '') return 'Required when "Create with namespace" is on.';
+      return /^[A-Za-z][A-Za-z0-9]{0,14}$/.test(value.trim())
+        ? undefined
+        : 'Letters and digits only, starting with a letter, at most 15 characters.';
+    },
   },
   {
     env: 'SCV_VOICE_FEATURES',
@@ -621,9 +649,11 @@ export function settingGroups(): string[] {
 /** Runs every validator over a set of values. Returns { env: message } for the failures. */
 export function validateAll(values: Record<string, string>): Record<string, string> {
   const errors: Record<string, string> = {};
+  const effective: Record<string, string> = {};
+  for (const setting of SETTINGS) effective[setting.env] = values[setting.env] ?? setting.default;
   for (const setting of SETTINGS) {
-    const value = values[setting.env] ?? setting.default;
-    const error = setting.validate?.(value);
+    const value = effective[setting.env]!;
+    const error = setting.validate?.(value, effective);
     if (error) errors[setting.env] = error;
   }
   return errors;
