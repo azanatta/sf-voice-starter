@@ -286,6 +286,16 @@ const checks: Check[] = [
     async run(ctx) {
       if (!ctx.config.consoleApp.create) return { ok: true, detail: 'disabled by configuration' };
       const org = requireOrg(ctx);
+      // The console-app phase skips itself when no bridge component is configured, so the app is
+      // never deployed. Say so, rather than the misleading "not visible".
+      if (ctx.config.consoleApp.bridgeComponent.trim() === '') {
+        return {
+          ok: false,
+          detail:
+            'not deployed: SCV_BRIDGE_COMPONENT is empty, so the console-app phase was skipped ' +
+            "(set it to the vendor package's bridge, e.g. cnxscv:CnxScvBridge)",
+        };
+      }
       // AppMenuItem.Name is not filterable — filtering returns zero rows rather than erroring.
       const apps = await query<{ Name: string }>(
         org.username,
